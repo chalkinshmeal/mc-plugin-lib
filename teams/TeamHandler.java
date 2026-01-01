@@ -38,10 +38,12 @@ public class TeamHandler {
     // Team methods
     //-------------------------------------------------------------------------
     public Set<String> getTeamNames() { return this.teams.keySet(); }
+    public Set<Team> getTeams() { return (Set<Team>) this.teams.values(); }
+    public int getNumTeams() { return this.teams.size(); }
     public boolean hasTeam(String teamName) { return this.teams.containsKey(teamName); }
+
     public void addTeam(String teamName, Component displayName, int startingScore) {
         if (this.hasTeam(teamName)) throw new IllegalArgumentException("Team already exists: '" + teamName + "'");
-
         Team team = new Team(teamName, displayName);
         this.teams.put(teamName, team);
         this.scoreboardHandler.addEntry(team.getDisplayName(), startingScore);
@@ -53,9 +55,26 @@ public class TeamHandler {
         this.scoreboardHandler.removeEntryIfExists(teamName);
     }
 
+    public void removeEmptyTeams() {
+        for (String teamName : this.teams.keySet()) {
+            if (this.getNumPlayers(teamName) == 0) this.removeTeamIfExists(teamName);
+        }
+    }
+
+    public Set<Team> getWinningTeams() {
+        int maxScore = this.getMaxScore();
+        Set<Team> winningTeams = Set.of();
+        for (Team team : this.getTeams()) {
+            if (this.getScore(team) == maxScore) winningTeams.add(team);
+        }
+        return winningTeams;
+    }
+
     //-------------------------------------------------------------------------
     // Player methods
     //-------------------------------------------------------------------------
+    public int getNumPlayers(String teamName) { return this.getPlayers(teamName).size(); }
+
     public void addPlayer(Player player, String teamName) {
         if (!this.hasTeam(teamName)) throw new IllegalArgumentException("Team does not exist: '" + teamName + "'");
         Team team = this.teams.get(teamName);
@@ -75,19 +94,38 @@ public class TeamHandler {
         return this.teams.get(teamName).getOnlinePlayers();
     }
 
+    public Set<Player> getAllPlayers() {
+        Set<Player> players = Set.of();
+        for (Team team : this.getTeams()) players.addAll(team.getOnlinePlayers());
+        return players;
+    }
+
     //-------------------------------------------------------------------------
     // Score methods
     //-------------------------------------------------------------------------
-    public void addScore(String teamName, int delta) { this.setScore(teamName, this.getScore(teamName) + delta); }
-    public void subtractScore(String teamName, int delta) { this.addScore(teamName, -delta); }
-    public void setScore(String teamName, int score) {
-        if (!this.hasTeam(teamName)) throw new IllegalArgumentException("Team does not exist: '" + teamName + "'");
-        this.scoreboardHandler.setScore(teamName, score);
+    public void addScore(Team team, int delta) { this.setScore(team, this.getScore(team) + delta); }
+    public void subtractScore(Team team, int delta) { this.addScore(team, -delta); }
+    public void setScore(Team team, int score) {
+        if (!this.hasTeam(team.getName())) throw new IllegalArgumentException("Team does not exist: '" + team.getName() + "'");
+        this.scoreboardHandler.setScore(team.getName(), score);
     }
 
+    public int getScore(Team team) { return this.getScore(team.getName()); }
     public int getScore(String teamName) {
         if (!this.hasTeam(teamName)) throw new IllegalArgumentException("Team does not exist: '" + teamName + "'");
         return this.scoreboardHandler.getScore(teamName);
+    }
+
+    public boolean noTeamHasPositiveLives() {
+        for (Team team : this.getTeams()) if (this.getScore(team) > 0) return false;
+        return true;
+    }
+
+    public int getMaxScore() {
+        if (this.getNumTeams() <= 0) throw new IllegalArgumentException("No teams exist");
+        int maxScore = Integer.MIN_VALUE;
+        for (Team team : this.getTeams()) if (this.getScore(team) > maxScore) maxScore = this.getScore(team);
+        return maxScore;
     }
 
     //-------------------------------------------------------------------------
