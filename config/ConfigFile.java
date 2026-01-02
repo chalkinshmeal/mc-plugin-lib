@@ -18,20 +18,18 @@ import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.plugin.java.JavaPlugin;
 
 //-----------------------------------------------------------------------------
-// ConfigHandler - a class to handle any manipulation of config.yml
+// ConfigFile - a class to handle any manipulation of any config.yml
 //-----------------------------------------------------------------------------
-public class ConfigHandler {
+public class ConfigFile {
     private final JavaPlugin plugin;
+    private final String configPath;
     private final FileConfiguration config;
     private File file;
     private final boolean debug = false;
 
-    // Constructor
-    public ConfigHandler(JavaPlugin plugin) {
-        this(plugin, "plugins/lockin/config.yml");
-    }
-    public ConfigHandler(JavaPlugin plugin, String configPath) {
+    public ConfigFile(JavaPlugin plugin, String configPath) {
         this.plugin = plugin;
+        this.configPath = configPath; // Ex: plugins/lockin/config.yml
 
         // Create file + directories, if necessary
         this.file = new File(configPath);

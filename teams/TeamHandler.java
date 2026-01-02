@@ -20,6 +20,7 @@ import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.plugin.PluginManager;
 import org.bukkit.plugin.java.JavaPlugin;
 
+import static chalkinshmeal.mc_plugin_lib.logging.LoggerUtils.info;
 import chalkinshmeal.mc_plugin_lib.scoreboard.ScoreboardHandler;
 import net.kyori.adventure.text.Component;
 
@@ -32,10 +33,12 @@ public class TeamHandler {
     private final ScoreboardHandler scoreboardHandler;
     private final Map<String, Team> teams = new HashMap<>();
     private final Set<Listener> listeners = Set.of(new PlayerJoinListener(), new PlayerQuitListener());
+    private final String title;
     private boolean isScoreboardVisible = false;
 
     public TeamHandler(JavaPlugin plugin, String scoreboardTitle) {
         this.plugin = plugin;
+        this.title = scoreboardTitle;
         this.scoreboardHandler = new ScoreboardHandler();
         this.scoreboardHandler.setTitle(scoreboardTitle);
     }
@@ -45,6 +48,7 @@ public class TeamHandler {
     //-------------------------------------------------------------------------
     public void setScoreboardVisible(boolean isVisible) { this.isScoreboardVisible = isVisible; }
     public boolean isScoreboardVisible() { return this.isScoreboardVisible; }
+    public String getTitle() { return this.title; }
     
     //-------------------------------------------------------------------------
     // Team methods
@@ -60,11 +64,12 @@ public class TeamHandler {
         return false;
     }
 
+    public void addTeam(String teamKey, Component displayName, int startingScore) { this.addTeam(teamKey, displayName, Material.DIRT, startingScore); }
     public void addTeam(String teamKey, Component displayName, Material material, int startingScore) {
         if (this.hasTeam(teamKey)) throw new IllegalArgumentException("Team already exists: '" + teamKey + "'");
         Team team = new Team(teamKey, displayName, material);
         this.teams.put(teamKey, team);
-        this.scoreboardHandler.addEntry(team.getDisplayName(), startingScore);
+        this.scoreboardHandler.addEntry(teamKey, startingScore);
     }
 
     public void removeTeamIfExists(String teamKey) {
@@ -163,8 +168,16 @@ public class TeamHandler {
     //-------------------------------------------------------------------------
     // Score methods
     //-------------------------------------------------------------------------
+    public void addScore(Player player, int delta) { this.setScore(player, this.getScore(player) + delta); }
     public void addScore(Team team, int delta) { this.setScore(team, this.getScore(team) + delta); }
+
+    public void subtractScore(Player player, int delta) { this.addScore(player, -delta); }
     public void subtractScore(Team team, int delta) { this.addScore(team, -delta); }
+
+    public void setScore(Player player, int score) {
+        if (!this.hasTeam(player)) throw new IllegalArgumentException("Player is not part of a team: '" + player.getName() + "'");
+        this.setScore(this.getTeam(player), score);
+    }
     public void setScore(Team team, int score) {
         if (!this.hasTeam(team.getKey())) throw new IllegalArgumentException("Team does not exist: '" + team.getKey() + "'");
         this.scoreboardHandler.setScore(team.getKey(), score);
@@ -174,6 +187,10 @@ public class TeamHandler {
     public int getScore(String teamKey) {
         if (!this.hasTeam(teamKey)) throw new IllegalArgumentException("Team does not exist: '" + teamKey + "'");
         return this.scoreboardHandler.getScore(teamKey);
+    }
+    public int getScore(Player player) {
+        if (!this.hasTeam(player)) throw new IllegalArgumentException("Player is not part of a team: '" + player.getName() + "'");
+        return this.getScore(this.getTeam(player));
     }
 
     public int getMaxScore() {
@@ -244,6 +261,24 @@ public class TeamHandler {
         @EventHandler
         public void onPlayerQuit(PlayerQuitEvent event) {
             scoreboardHandler.hideFromPlayer(event.getPlayer());
+        }
+    }
+
+    //-----------------------------------------------------------------------------
+    // Debug
+    //-----------------------------------------------------------------------------
+    public void print() {
+        info("Team Handler Status");
+        info("- Title: " + this.getTitle());
+        info("- Is visible?: " + this.isScoreboardVisible());
+        info("- Total Teams (In internal Map<String, Team>): " + this.getNumTeams());
+        info("- Total Teams (In scoreboard): " + this.scoreboardHandler.getNumEntries());
+        info("- Team dictionary:");
+        for (var entry : this.teams.entrySet()) {
+            String teamKey = entry.getKey();
+            Team team = entry.getValue();
+            String score = (team != null) ? String.valueOf(this.getScore(teamKey)) : "N/A";
+            info("  - " + teamKey + " (" + team + ", Score: " + score + ")");
         }
     }
 }

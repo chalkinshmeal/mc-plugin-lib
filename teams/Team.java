@@ -79,4 +79,11 @@ public class Team {
         }
         return playerNames;
     }
+
+    //-------------------------------------------------------------------------
+    // Debug
+    //-------------------------------------------------------------------------
+    public String toString() {
+        return "[Team] Key: " + this.getKey() + ", Player Count: " + this.getNumPlayers() + ")";
+    }
 }
