@@ -1,0 +1,66 @@
+package chalkinshmeal.mc_plugin_lib.custom_tasks.tasks;
+
+import java.util.ArrayList;
+import java.util.List;
+
+import org.bukkit.Material;
+import org.bukkit.event.EventHandler;
+import org.bukkit.event.Listener;
+import org.bukkit.event.player.PlayerTeleportEvent;
+import org.bukkit.inventory.ItemStack;
+
+import chalkinshmeal.mc_plugin_lib.custom_tasks.CustomTask;
+
+public class TeleportWithAnEnderpearlTask extends CustomTask {
+    //---------------------------------------------------------------------------------------------
+    // Constructor, which takes lockintaskhandler
+    //---------------------------------------------------------------------------------------------
+    public TeleportWithAnEnderpearlTask() {
+        super();
+        this.description = "Teleport with an enderpearl";
+        this.displayItem = new ItemStack(Material.ENDER_PEARL);
+        
+    }
+
+    //---------------------------------------------------------------------------------------------
+    // Abstract methods
+    //---------------------------------------------------------------------------------------------
+    public void validateConfig() {}
+
+    public void addListeners() {
+		this.listeners.add(new TeleportWithAnEnderpearlTaskPlayerInteractListener(this));
+    }
+
+    public static List<TeleportWithAnEnderpearlTask> getTasks(int tier) {
+        if (tier != 3) return new ArrayList<>();
+        List<TeleportWithAnEnderpearlTask> tasks = new ArrayList<>();
+        tasks.add(new TeleportWithAnEnderpearlTask());
+        return tasks;
+    }
+
+    //---------------------------------------------------------------------------------------------
+    // Any listeners. Upon completion, lockinTaskHandler.CompleteTask(player);
+    //---------------------------------------------------------------------------------------------
+    public void onPlayerTeleportEvent(PlayerTeleportEvent event) {
+        if (event.getCause() != PlayerTeleportEvent.TeleportCause.ENDER_PEARL) return;
+        this.complete(event.getPlayer());
+    }
+}
+
+//---------------------------------------------------------------------------------------------
+// Private classes - any listeners that this task requires
+//---------------------------------------------------------------------------------------------
+class TeleportWithAnEnderpearlTaskPlayerInteractListener implements Listener {
+    private final TeleportWithAnEnderpearlTask task;
+
+    public TeleportWithAnEnderpearlTaskPlayerInteractListener(TeleportWithAnEnderpearlTask task) {
+        this.task = task;
+    }
+
+    /** Event Handler */
+    @EventHandler
+    public void onPlayerTeleportEvent(PlayerTeleportEvent event) {
+        if (this.task.haveAllTeamsCompleted()) return;
+        this.task.onPlayerTeleportEvent(event);
+    }
+}
