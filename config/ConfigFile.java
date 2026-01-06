@@ -45,6 +45,11 @@ public class ConfigFile {
         }
     }
 
+    //-------------------------------------------------------------------------
+    // Accessor/Mutators
+    //-------------------------------------------------------------------------
+    public String getConfigPath() { return this.configPath; }
+
     /** Checkers */
     public boolean doesKeyExist(String key) {
         return this.config.contains(key);

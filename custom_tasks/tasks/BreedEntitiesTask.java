@@ -1,0 +1,105 @@
+package chalkinshmeal.mc_plugin_lib.custom_tasks.tasks;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import org.bukkit.Material;
+import org.bukkit.entity.EntityType;
+import org.bukkit.entity.Player;
+import org.bukkit.event.EventHandler;
+import org.bukkit.event.Listener;
+import org.bukkit.event.entity.EntityBreedEvent;
+import org.bukkit.inventory.ItemStack;
+
+import chalkinshmeal.mc_plugin_lib.custom_tasks.CustomTask;
+import chalkinshmeal.lockin.utils.Utils;
+import chalkinshmeal.mc_plugin_lib.teams.Team;
+
+public class BreedEntitiesTask extends CustomTask {
+    private static final String configKey = "breedEntitiesTask";
+    private static final String normalKey = "entityTypes";
+    private final EntityType entityType;
+    private final int amount;
+    private final Map<Team, Integer> bredEntities;
+
+    //---------------------------------------------------------------------------------------------
+    // Constructor, which takes lockintaskhandler
+    //---------------------------------------------------------------------------------------------
+    public BreedEntitiesTask(EntityType entityType, int amount) {
+        super();
+        this.entityType = entityType;
+        this.amount = amount;
+        this.bredEntities = new HashMap<>();
+        this.description = "Breed " + this.amount + " " + Utils.getReadableEntityTypeName(entityType);
+        this.displayItem = new ItemStack(Material.LEAD);
+    }
+
+    //---------------------------------------------------------------------------------------------
+    // Abstract methods
+    //---------------------------------------------------------------------------------------------
+    public void validateConfig() {
+        for (String tierStr : config.getKeyListFromKey(configKey + "." + normalKey)) {
+            for (String valueStr : config.getListFromKey(configKey + "." + normalKey + "." + tierStr)) {
+                EntityType.valueOf(valueStr);
+            }
+        }
+    }
+
+    public void addListeners() {
+		this.listeners.add(new BreedEntitiesTaskEntityBreedEventListener(this));
+    }
+
+    //---------------------------------------------------------------------------------------------
+    // Task getter
+    //---------------------------------------------------------------------------------------------
+    public static List<BreedEntitiesTask> getTasks(int tier) {
+        List<BreedEntitiesTask> tasks = new ArrayList<>();
+        int taskCount = config.getInt(configKey + "." + maxTaskCount, 1);
+        List<String> entityTypeStrs = Utils.getRandomItems(config.getKeyListFromKey(configKey + "." + normalKey + "." + tier), taskCount);
+        int loopCount = Math.min(taskCount, entityTypeStrs.size());
+
+        for (int i = 0; i < loopCount; i++) {
+            String entityTypeStr = entityTypeStrs.get(i);
+            EntityType entityType = EntityType.valueOf(entityTypeStrs.get(i));
+            int amount = config.getInt(configKey + "." + normalKey + "." + tier + "." + entityTypeStr, 1);
+            tasks.add(new BreedEntitiesTask(entityType, amount));
+        }
+        return tasks;
+    }
+
+    //---------------------------------------------------------------------------------------------
+    // Any listeners. Upon completion, lockinTaskHandler.CompleteTask(player);
+    //---------------------------------------------------------------------------------------------
+    public void onEntityBreedEvent(EntityBreedEvent event) {
+        // Check if the breeding was initiated by a player
+        if (!(event.getBreeder() instanceof Player)) return;
+        Player player = (Player) event.getBreeder();
+        Team team = CustomTask.teamHandler.getTeam(player);
+        
+        if (event.getMother().getType() != this.entityType) return;
+        this.bredEntities.put(team, this.bredEntities.getOrDefault(team, 0) + 1);
+
+        if (this.bredEntities.get(team) < this.amount) return;
+        this.complete(player);
+    }
+}
+
+//---------------------------------------------------------------------------------------------
+// Private classes - any listeners that this task requires
+//---------------------------------------------------------------------------------------------
+class BreedEntitiesTaskEntityBreedEventListener implements Listener {
+    private final BreedEntitiesTask task;
+
+    public BreedEntitiesTaskEntityBreedEventListener(BreedEntitiesTask task) {
+        this.task = task;
+    }
+
+    /** Event Handler */
+    @EventHandler
+    public void onEntityBreedEvent(EntityBreedEvent event) {
+        if (this.task.haveAllTeamsCompleted()) return;
+        this.task.onEntityBreedEvent(event);
+    }
+}
