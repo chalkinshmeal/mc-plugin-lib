@@ -45,4 +45,8 @@ public class PlayerUtils {
         // Inventory
         player.getInventory().clear();
     }
+
+    public static void teleportPlayerToSpawn(Player player) {
+        player.teleport(player.getRespawnLocation());
+    }
 }
